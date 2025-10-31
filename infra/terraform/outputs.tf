@@ -6,3 +6,4 @@ output "droplet_ip" {
 output "droplet_id" {
   value = digitalocean_droplet.web.id
 }
+

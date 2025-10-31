@@ -9,6 +9,7 @@ concurrency:
 
 jobs:
   destroy:
+    name: Destroy Infrastructure for ${{ github.ref_name == 'main' && 'production' || 'development' }}
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
