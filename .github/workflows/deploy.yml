@@ -31,7 +31,7 @@ jobs:
           terraform init \
             -backend-config="key=infra/${DIGITALOCEAN_ENVIRONMENT}/terraform.tfstate"
 
-          terraform apply -auto-approve \            
+          terraform apply -auto-approve \
             -var="image=ubuntu-25-04-x64" \
             -var="env_name=${DIGITALOCEAN_ENVIRONMENT}" \
             -var="instance_size=s-1vcpu-512mb-10gb" \
