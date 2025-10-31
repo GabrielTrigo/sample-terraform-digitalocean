@@ -14,8 +14,8 @@ jobs:
   deploy:
     name: Deploy to ${{ github.ref_name == 'main' && 'production' || 'development' }}
     runs-on: ubuntu-latest
-    container:
-      image: cytopia/ansible:latest
+    # container:
+    # image: cytopia/ansible:latest
 
     env:
       ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
