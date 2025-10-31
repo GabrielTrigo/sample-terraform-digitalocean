@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - dev
+    paths:
+      - "infra/terraform/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,9 +16,6 @@ jobs:
   deploy:
     name: Deploy to ${{ github.ref_name == 'main' && 'production' || 'development' }}
     runs-on: ubuntu-latest
-    # container:
-    # image: cytopia/ansible:latest
-
     env:
       ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
       SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
