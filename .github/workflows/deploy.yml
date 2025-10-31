@@ -6,6 +6,10 @@ on:
       - main
       - dev
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Deploy to ${{ github.ref_name == 'main' && 'production' || 'development' }}
@@ -29,14 +33,17 @@ jobs:
         with:
           terraform_version: 1.9.5
 
-      - name: Terraform Init & Apply
+      - name: Terraform Init
         working-directory: infra/terraform
         run: |
           set -euo pipefail
-          terraform init \
-            -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
+          terraform init -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
 
-          terraform apply -auto-approve \
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: |
+          set -euo pipefail
+          terraform plan -out=plan.tfplan \
             -var="image=ubuntu-25-04-x64" \
             -var="env_name=${ENVIRONMENT}" \
             -var="instance_size=s-1vcpu-512mb-10gb" \
@@ -44,29 +51,51 @@ jobs:
             -var="do_token=${DIGITALOCEAN_TOKEN}" \
             -var="spaces_access_id=${AWS_ACCESS_KEY_ID}" \
             -var="spaces_secret_key=${AWS_SECRET_ACCESS_KEY}"
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: |
+          set -euo pipefail
+          terraform apply -auto-approve plan.tfplan
+
       - name: Get Droplet IP
         id: get_ip
         working-directory: infra/terraform
         run: |
-          set -e
+          set -euo pipefail
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
-      - name: Output Droplet Info
-        run: |
-          echo "✅ Environment: ${{ env.ENVIRONMENT }}"
-          echo "🌍 Droplet IP: ${{ steps.get_ip.outputs.droplet_ip }}"
-
+      # --- SSH & Ansible ---
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-      - name: Install Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('infra/ansible/requirements.txt') }}
+
+      - name: Install Ansible (if not container)
+        if: ${{ !startsWith(runner.container, 'cytopia/ansible') }}
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install ansible
 
       - name: Run Ansible Playbook
         working-directory: infra/ansible
         run: |
-          ansible-playbook -i "${{ steps.get_ip.outputs.droplet_ip }}," playbooks/install-nginx.yml -u root --private-key ~/.ssh/id_rsa
+          set -euo pipefail
+          ansible-playbook \
+            -i "${{ steps.get_ip.outputs.droplet_ip }}," \
+            playbooks/install-nginx.yml \
+            -u root \
+            --private-key ~/.ssh/id_rsa
+
+      - name: Output Droplet Info
+        run: |
+          echo "✅ Environment: ${{ env.ENVIRONMENT }}"
+          echo "🌍 Droplet IP: ${{ steps.get_ip.outputs.droplet_ip }}"
