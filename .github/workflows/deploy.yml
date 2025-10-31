@@ -66,7 +66,7 @@ jobs:
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
-      # --- SSH & Ansible ---
+      # --- SSH & Ansible ----
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
