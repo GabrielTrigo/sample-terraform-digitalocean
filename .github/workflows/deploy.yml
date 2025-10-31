@@ -1,12 +1,7 @@
-name: Deploy Infra and Configure Nginx on DigitalOcean
+name: Deploy Terraform + Ansible (DigitalOcean)
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Choose environment (dev or prod)"
-        required: true
-        default: "dev"
 
 jobs:
   deploy:
@@ -26,7 +21,7 @@ jobs:
         env:
           SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
           DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
-          DIGITALOCEAN_ENVIRONMENT: ${{ github.event.inputs.environment }}
+          DIGITALOCEAN_ENVIRONMENT: dev
           AWS_ACCESS_KEY_ID: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
           AWS_DEFAULT_REGION: us-east-1
