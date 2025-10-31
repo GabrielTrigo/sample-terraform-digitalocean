@@ -20,10 +20,7 @@ terraform {
     skip_metadata_api_check     = true
     skip_region_validation      = true
     skip_s3_checksum            = true
-    region                      = "us-east-2"
-
-    # Enable state locking with a lockfile
-    use_lockfile = true
+    region                      = "us-east-1"
   }
 }
 
@@ -49,11 +46,12 @@ resource "digitalocean_droplet" "web" {
     systemctl enable nginx
     systemctl start nginx
   EOF
+  tags      = ["nginx-server", var.env_name]
 }
 
 resource "digitalocean_ssh_key" "web_key" {
   name       = "${var.env_name}-ssh-key"
-  public_key = file(var.public_key_path)
+  public_key = var.public_key
 }
 
 resource "digitalocean_firewall" "web_firewall" {

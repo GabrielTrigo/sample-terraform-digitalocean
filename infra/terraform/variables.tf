@@ -10,6 +10,10 @@ variable "instance_size" {
   type    = string
   default = "s-1vcpu-512mb-10gb"
 }
+variable "public_key" {
+  description = "Conteúdo da chave pública SSH"
+  type        = string
+}
 variable "public_key_path" {
   type    = string
   default = "../.ssh/key.pub"

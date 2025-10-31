@@ -1,0 +1,64 @@
+name: Deploy Infra and Configure Nginx on DigitalOcean
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Choose environment (dev or prod)"
+        required: true
+        default: "dev"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform Init & Apply
+        working-directory: infra/terraform
+        env:
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+          DIGITALOCEAN_ENVIRONMENT: ${{ github.event.inputs.environment }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          terraform init \
+            -backend-config="key=infra/${DIGITALOCEAN_ENVIRONMENT}/terraform.tfstate"
+
+          terraform apply -auto-approve \            
+            -var "image=ubuntu-25-04-x64" \
+            -var "env_name=${DIGITALOCEAN_ENVIRONMENT}" \
+            -var "instance_size=s-1vcpu-512mb-10gb" \
+            -var="public_key=${SSH_PUBLIC_KEY}" \
+            -var "do_token=${DIGITALOCEAN_TOKEN}" \
+            -var "spaces_access_id=${AWS_ACCESS_KEY_ID}" \
+            -var "spaces_secret_key=${AWS_SECRET_ACCESS_KEY}"
+
+      - name: Get Droplet IP
+        id: get_ip
+        working-directory: infra/terraform
+        run: |
+          echo "droplet_ip=$(terraform output -raw droplet_ip)" >> $GITHUB_OUTPUT
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      - name: Run Ansible Playbook
+        working-directory: infra/ansible
+        run: |
+          ansible-playbook -i "${{ steps.get_ip.outputs.droplet_ip }}," playbooks/install-nginx.yml -u root --private-key ~/.ssh/id_rsa
