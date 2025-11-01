@@ -39,7 +39,7 @@ jobs:
 
       - name: Build container image
         working-directory: app/
-        run: docker build -t registry.digitalocean.com/poc-terraform/app:$(echo $GITHUB_SHA | head -c7) .
+        run: docker build -t registry.digitalocean.com/${{ github.repository }}/app:${{ github.sha }} .
 
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         working-directory: app/
@@ -47,7 +47,7 @@ jobs:
 
       - name: Push image to DigitalOcean Container Registry
         working-directory: app/
-        run: docker push registry.digitalocean.com/poc-terraform/app:$(echo $GITHUB_SHA | head -c7)
+        run: docker push registry.digitalocean.com/${{ github.repository }}/app:${{ github.sha }}
 
       # - name: Build and Push Image
       #   working-directory: app/
@@ -65,7 +65,7 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull registry.digitalocean.com/poc-terraform/app:$(echo $GITHUB_SHA | head -c7)
+            docker pull registry.digitalocean.com/${{ github.repository }}/app:${{ github.sha }}
             docker stop app || true
             docker rm app || true
             docker run -d --name app ${{ github.repository }}/app:${{ github.sha }}
