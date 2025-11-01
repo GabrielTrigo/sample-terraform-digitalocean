@@ -24,6 +24,11 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ env.TF_VAR_do_token }}
+
       - name: Get droplet IP from Terraform state
         id: get_ip
         working-directory: infra/terraform
@@ -32,17 +37,26 @@ jobs:
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build and Push Image
+      - name: Build container image
         working-directory: app/
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}/app:${{ github.sha }}-${{ env.ENVIRONMENT }}
-          docker build -t $IMAGE_NAME ./app
-          docker push $IMAGE_NAME
-        env:
-          DOCKER_BUILDKIT: 1
+        run: docker build -t registry.digitalocean.com/poc-terraform/app:$(echo $GITHUB_SHA | head -c7) .
+
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        working-directory: app/
+        run: doctl registry login --expiry-seconds 1200
+
+      - name: Push image to DigitalOcean Container Registry
+        working-directory: app/
+        run: docker push registry.digitalocean.com/poc-terraform/app:$(echo $GITHUB_SHA | head -c7)
+
+      # - name: Build and Push Image
+      #   working-directory: app/
+      #   run: |
+      #     IMAGE_NAME=ghcr.io/${{ github.repository }}/app:${{ github.sha }}-${{ env.ENVIRONMENT }}
+      #     docker build -t $IMAGE_NAME ./app
+      #     docker push $IMAGE_NAME
+      #   env:
+      #     DOCKER_BUILDKIT: 1
 
       - name: Deploy on Droplet
         uses: appleboy/ssh-action@v1.0.3
@@ -51,7 +65,7 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+            docker pull registry.digitalocean.com/poc-terraform/app:$(echo $GITHUB_SHA | head -c7)
             docker stop app || true
             docker rm app || true
-            docker run -d --name app -p 80:80 ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+            docker run -d --name app ${{ github.repository }}/app:${{ github.sha }}
