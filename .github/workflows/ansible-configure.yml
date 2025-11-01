@@ -33,16 +33,18 @@ jobs:
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
-      - name: Cache APT packages
+      - name: Cache pip
         uses: actions/cache@v4
         with:
-          path: /var/cache/apt
-          key: ${{ runner.os }}-apt-ansible
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-ansible
           restore-keys: |
-            ${{ runner.os }}-apt-
+            ${{ runner.os }}-pip-
 
       - name: Install Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install ansible
 
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.9.0
