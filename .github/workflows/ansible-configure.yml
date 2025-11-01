@@ -33,6 +33,14 @@ jobs:
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-ansible
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
 
