@@ -49,15 +49,6 @@ jobs:
         working-directory: app/
         run: docker push registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
 
-      # - name: Build and Push Image
-      #   working-directory: app/
-      #   run: |
-      #     IMAGE_NAME=ghcr.io/sample-terraform-digitalocean/app:${{ github.sha }}-${{ env.ENVIRONMENT }}
-      #     docker build -t $IMAGE_NAME ./app
-      #     docker push $IMAGE_NAME
-      #   env:
-      #     DOCKER_BUILDKIT: 1
-
       - name: Deploy on Droplet
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -68,4 +59,4 @@ jobs:
             docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
             docker stop app || true
             docker rm app || true
-            docker run -d --name app sample-terraform-digitalocean/app:${{ github.sha }}
+            docker run -d --name app registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
