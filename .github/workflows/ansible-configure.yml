@@ -1,0 +1,55 @@
+name: Ansible Configure Servers
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      TF_VAR_do_token: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      TF_VAR_spaces_access_id: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+      TF_VAR_spaces_secret_key: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Get droplet IP from Terraform state
+        id: get_ip
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
+          droplet_ip=$(terraform output -raw droplet_ip)
+          echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
+
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Create dynamic inventory
+        working-directory: infra/ansible
+        run: |
+          echo "[droplets]" > hosts.ini
+          echo "${{ steps.get_ip.outputs.droplet_ip }} ansible_user=root" >> hosts.ini
+          cat hosts.ini
+
+      - name: Run Ansible Playbook
+        working-directory: infra/ansible
+        run: |
+          ssh-keyscan -H "${{ steps.get_ip.outputs.droplet_ip }}" >> ~/.ssh/known_hosts
+          ansible-playbook -i hosts.ini playbooks/setup-docker.yml

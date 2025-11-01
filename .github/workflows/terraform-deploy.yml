@@ -1,10 +1,7 @@
 name: Deploy Terraform + Ansible (DigitalOcean)
 
 on:
-  push:
-    branches:
-      - main
-      - dev
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -130,34 +127,3 @@ jobs:
     # Disponibiliza o IP para o próximo job
     outputs:
       droplet_ip: ${{ steps.get_ip.outputs.droplet_ip }}
-
-  ################################################################
-  # 4. CONFIGURE: Roda o Ansible no IP criado.
-  ################################################################
-  configure:
-    runs-on: ubuntu-latest
-    needs: apply
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
-
-      - name: Setup SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Create dynamic inventory
-        working-directory: infra/ansible
-        run: |
-          echo "[droplets]" > hosts.ini
-          echo "${{ needs.apply.outputs.droplet_ip }} ansible_user=root" >> hosts.ini
-
-      - name: Run Ansible Playbook
-        working-directory: infra/ansible
-        run: |
-          ssh-keyscan -H "${{ needs.apply.outputs.droplet_ip }}" >> ~/.ssh/known_hosts
-          ansible-playbook -i hosts.ini playbooks/setup-docker.yml
