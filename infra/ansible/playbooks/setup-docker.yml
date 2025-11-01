@@ -1,32 +1,44 @@
+---
 - name: Setup Docker on Droplet
   hosts: droplets
   become: true
+  gather_facts: true
 
   tasks:
-    - name: Update apt cache
+    - name: Ensure apt dependencies are installed
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: true
+
+    - name: Create keyrings directory if missing
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker official GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Set up Docker repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/docker.list
+        content: |
+          deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename | lower }} stable
+        mode: "0644"
+
+    - name: Update apt cache after adding Docker repo
       ansible.builtin.apt:
         update_cache: true
 
-    - name: Install required packages
-      ansible.builtin.apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - software-properties-common
-        state: present
-
-    - name: Add Docker GPG key
-      ansible.builtin.apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
-
-    - name: Add Docker repository
-      ansible.builtin.apt_repository:
-        repo: deb https://download.docker.com/linux/ubuntu focal stable
-        state: present
-
-    - name: Install Docker and Compose
+    - name: Install Docker Engine and related tools
       ansible.builtin.apt:
         name:
           - docker-ce
@@ -34,10 +46,67 @@
           - containerd.io
           - docker-compose-plugin
         state: latest
-        update_cache: true
 
-    - name: Enable Docker service
+    - name: Enable and start Docker service
       ansible.builtin.systemd:
         name: docker
         enabled: true
         state: started
+
+    - name: Add default user to Docker group (optional)
+      ansible.builtin.user:
+        name: root
+        groups: docker
+        append: true
+
+    - name: Verify Docker installation
+      ansible.builtin.command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Display Docker version
+      ansible.builtin.debug:
+        msg: "Docker installed successfully: {{ docker_version.stdout }}"
+# - name: Setup Docker on Droplet
+#   hosts: droplets
+#   become: true
+
+#   tasks:
+#     - name: Update apt cache
+#       ansible.builtin.apt:
+#         update_cache: true
+
+#     - name: Install required packages
+#       ansible.builtin.apt:
+#         name:
+#           - apt-transport-https
+#           - ca-certificates
+#           - curl
+#           - software-properties-common
+#         state: present
+
+#     - name: Add Docker GPG key
+#       ansible.builtin.apt_key:
+#         url: https://download.docker.com/linux/ubuntu/gpg
+#         state: present
+
+#     - name: Add Docker repository
+#       ansible.builtin.apt_repository:
+#         repo: deb https://download.docker.com/linux/ubuntu focal stable
+#         state: present
+
+#     - name: Install Docker and Compose
+#       ansible.builtin.apt:
+#         name:
+#           - docker-ce
+#           - docker-ce-cli
+#           - containerd.io
+#           - docker-compose-plugin
+#         state: latest
+#         update_cache: true
+
+#     - name: Enable Docker service
+#       ansible.builtin.systemd:
+#         name: docker
+#         enabled: true
+#         state: started
