@@ -33,20 +33,20 @@ provider "digitalocean" {
 
 # Create a web server
 resource "digitalocean_droplet" "web" {
-  image     = var.image
-  name      = "${var.env_name}-web"
-  size      = var.instance_size
-  backups   = false
-  region    = "sfo2"
-  ssh_keys  = [digitalocean_ssh_key.web_key.id]
-  user_data = <<-EOF
-    #!/bin/bash
-    apt update -y
-    apt install nginx -y
-    systemctl enable nginx
-    systemctl start nginx
-  EOF
-  tags      = ["nginx-server", var.env_name]
+  image    = var.image
+  name     = "${var.env_name}-web"
+  size     = var.instance_size
+  backups  = false
+  region   = "sfo2"
+  ssh_keys = [digitalocean_ssh_key.web_key.id]
+  tags     = [var.env_name]
+  # user_data = <<-EOF
+  #   #!/bin/bash
+  #   apt update -y
+  #   apt install nginx -y
+  #   systemctl enable nginx
+  #   systemctl start nginx
+  # EOF
 }
 
 resource "digitalocean_ssh_key" "web_key" {
