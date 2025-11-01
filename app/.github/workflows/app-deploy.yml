@@ -1,37 +1,56 @@
-# name: Deploy App
+name: Deploy App
 
-# on:
-#   push:
-#     branches:
-#       - main
-#       - dev
+on:
+  push:
+    branches:
+      - main
+      - dev
 
-# jobs:
-#   build-and-deploy:
-#     runs-on: ubuntu-latest
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      TF_VAR_do_token: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      TF_VAR_spaces_access_id: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+      TF_VAR_spaces_secret_key: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-#     steps:
-#       - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-#       - name: Log in to GitHub Container Registry
-#         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Get droplet IP from Terraform state
+        id: get_ip
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
+          droplet_ip=$(terraform output -raw droplet_ip)
+          echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
-#       - name: Build and Push Image
-#         run: |
-#           IMAGE_NAME=ghcr.io/${{ github.repository }}/app:${{ github.sha }}
-#           docker build -t $IMAGE_NAME ./app
-#           docker push $IMAGE_NAME
-#         env:
-#           DOCKER_BUILDKIT: 1
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-#       - name: Deploy on Droplet
-#         uses: appleboy/ssh-action@v1.0.3
-#         with:
-#           host: ${{ secrets.DROPLET_IP }}
-#           username: root
-#           key: ${{ secrets.SSH_PRIVATE_KEY }}
-#           script: |
-#             docker pull ghcr.io/${{ github.repository }}/app:${{ github.sha }}
-#             docker stop app || true
-#             docker rm app || true
-#             docker run -d --name app -p 80:80 ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+      - name: Build and Push Image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+          docker build -t $IMAGE_NAME ./app
+          docker push $IMAGE_NAME
+        env:
+          DOCKER_BUILDKIT: 1
+
+      - name: Deploy on Droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.get_ip.outputs.droplet_ip }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker pull ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+            docker stop app || true
+            docker rm app || true
+            docker run -d --name app -p 80:80 ghcr.io/${{ github.repository }}/app:${{ github.sha }}
