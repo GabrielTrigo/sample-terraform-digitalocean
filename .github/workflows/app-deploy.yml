@@ -39,7 +39,7 @@ jobs:
 
       - name: Build container image
         working-directory: app/
-        run: docker build -t registry.digitalocean.com/${{ github.repository }}/app:${{ github.sha }} .
+        run: docker build -t registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }} .
 
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         working-directory: app/
@@ -47,12 +47,12 @@ jobs:
 
       - name: Push image to DigitalOcean Container Registry
         working-directory: app/
-        run: docker push registry.digitalocean.com/${{ github.repository }}/app:${{ github.sha }}
+        run: docker push registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
 
       # - name: Build and Push Image
       #   working-directory: app/
       #   run: |
-      #     IMAGE_NAME=ghcr.io/${{ github.repository }}/app:${{ github.sha }}-${{ env.ENVIRONMENT }}
+      #     IMAGE_NAME=ghcr.io/sample-terraform-digitalocean/app:${{ github.sha }}-${{ env.ENVIRONMENT }}
       #     docker build -t $IMAGE_NAME ./app
       #     docker push $IMAGE_NAME
       #   env:
@@ -65,7 +65,7 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull registry.digitalocean.com/${{ github.repository }}/app:${{ github.sha }}
+            docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
             docker stop app || true
             docker rm app || true
-            docker run -d --name app ${{ github.repository }}/app:${{ github.sha }}
+            docker run -d --name app sample-terraform-digitalocean/app:${{ github.sha }}
