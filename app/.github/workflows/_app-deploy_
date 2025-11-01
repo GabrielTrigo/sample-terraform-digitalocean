@@ -1,0 +1,37 @@
+# name: Deploy App
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
+
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Log in to GitHub Container Registry
+#         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+#       - name: Build and Push Image
+#         run: |
+#           IMAGE_NAME=ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+#           docker build -t $IMAGE_NAME ./app
+#           docker push $IMAGE_NAME
+#         env:
+#           DOCKER_BUILDKIT: 1
+
+#       - name: Deploy on Droplet
+#         uses: appleboy/ssh-action@v1.0.3
+#         with:
+#           host: ${{ secrets.DROPLET_IP }}
+#           username: root
+#           key: ${{ secrets.SSH_PRIVATE_KEY }}
+#           script: |
+#             docker pull ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+#             docker stop app || true
+#             docker rm app || true
+#             docker run -d --name app -p 80:80 ghcr.io/${{ github.repository }}/app:${{ github.sha }}
