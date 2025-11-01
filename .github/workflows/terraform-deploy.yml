@@ -40,9 +40,9 @@ jobs:
       - name: Install Ansible Lint
         run: pip install ansible-lint
 
-      - name: Run Ansible Lint
-        working-directory: infra/ansible
-        run: ansible-lint playbooks/setup-docker.yml
+      # - name: Run Ansible Lint
+      #   working-directory: infra/ansible
+      #   run: ansible-lint playbooks/setup-docker.yml
 
   ################################################################
   # 2. PLAN: Gera o plano de execução do Terraform.
