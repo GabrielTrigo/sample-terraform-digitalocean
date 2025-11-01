@@ -127,7 +127,7 @@ jobs:
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
-    # Disponibiliza o IP para o próximo job
+    # Disponibiliza o IP para o próximo job 
     outputs:
       droplet_ip: ${{ steps.get_ip.outputs.droplet_ip }}
 
