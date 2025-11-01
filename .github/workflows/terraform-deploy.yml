@@ -42,7 +42,7 @@ jobs:
 
       - name: Run Ansible Lint
         working-directory: infra/ansible
-        run: ansible-lint playbooks/install-nginx.yml
+        run: ansible-lint playbooks/setup-docker.yml
 
   ################################################################
   # 2. PLAN: Gera o plano de execução do Terraform.
@@ -70,19 +70,11 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/terraform
-        run: |
-          terraform init \
-            -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
+        run: terraform init -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
 
       - name: Terraform Plan
         working-directory: infra/terraform
-        run: |
-          # Passa as variáveis não-secretas
-          terraform plan \
-            -var="image=ubuntu-25-04-x64" \
-            -var="env_name=${ENVIRONMENT}" \
-            -var="instance_size=s-1vcpu-512mb-10gb" \
-            -out=tfplan
+        run: terraform plan -var-file="environments/${ENVIRONMENT}.tfvars" -out=tfplan
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -123,9 +115,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/terraform
-        run: |
-          terraform init \
-            -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
+        run: terraform init -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
 
       - name: Terraform Apply
         working-directory: infra/terraform
@@ -168,11 +158,8 @@ jobs:
           echo "[droplets]" > hosts.ini
           echo "${{ needs.apply.outputs.droplet_ip }} ansible_user=root" >> hosts.ini
 
-          echo "Inventário gerado:"
-          cat hosts.ini
-
       - name: Run Ansible Playbook
         working-directory: infra/ansible
         run: |
           ssh-keyscan -H "${{ needs.apply.outputs.droplet_ip }}" >> ~/.ssh/known_hosts
-          ansible-playbook -i hosts.ini playbooks/install-nginx.yml
+          ansible-playbook -i hosts.ini playbooks/setup-docker.yml
