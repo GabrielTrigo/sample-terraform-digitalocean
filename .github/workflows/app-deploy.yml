@@ -56,6 +56,8 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            doctl auth init -t ${{ env.TF_VAR_do_token }}
+            doctl registry login --expiry-seconds 1200
             docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
             docker stop app || true
             docker rm app || true
