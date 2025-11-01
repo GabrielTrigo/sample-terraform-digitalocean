@@ -37,8 +37,8 @@ jobs:
         working-directory: infra/terraform
         run: terraform validate
 
-      - name: Install Ansible Lint
-        run: pip install ansible-lint
+      # - name: Install Ansible Lint
+      #   run: pip install ansible-lint
 
       # - name: Run Ansible Lint
       #   working-directory: infra/ansible
