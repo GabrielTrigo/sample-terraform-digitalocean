@@ -1,0 +1,44 @@
+---
+- name: Setup Docker on Droplet
+  hosts: droplets
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Ensure apt dependencies are installed
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: true
+
+    - name: Install Docker using the official Docker convenience script
+      ansible.builtin.shell: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Enable and start Docker service
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add default user to Docker group
+      ansible.builtin.user:
+        name: root
+        groups: docker
+        append: true
+
+    - name: Verify Docker installation
+      ansible.builtin.command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Display Docker version
+      ansible.builtin.debug:
+        msg: "Docker installed successfully: {{ docker_version.stdout }}"

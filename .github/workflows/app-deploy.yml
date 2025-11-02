@@ -1,0 +1,78 @@
+name: Deploy App
+
+on:
+  push:
+    paths:
+      - "app/**"
+    branches:
+      - main
+      - dev
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      TF_VAR_do_token: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      TF_VAR_spaces_access_id: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+      TF_VAR_spaces_secret_key: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ env.TF_VAR_do_token }}
+
+      - name: Get droplet IP from Terraform state
+        id: get_ip
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend-config="key=infra/${ENVIRONMENT}/terraform.tfstate"
+          droplet_ip=$(terraform output -raw droplet_ip)
+          echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
+
+      - name: Build container image
+        working-directory: app/
+        run: docker build -t registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }} .
+
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        working-directory: app/
+        run: doctl registry login --expiry-seconds 1200
+
+      - name: Push image to DigitalOcean Container Registry
+        working-directory: app/
+        run: docker push registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
+
+      - name: Deploy on Droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.get_ip.outputs.droplet_ip }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Install doctl if not already installed
+            if ! command -v doctl &> /dev/null; then
+              cd /tmp
+              wget -q https://github.com/digitalocean/doctl/releases/download/v1.146.0/doctl-1.146.0-linux-amd64.tar.gz
+              tar xf doctl-1.146.0-linux-amd64.tar.gz
+              mv doctl /usr/local/bin
+              rm doctl-1.146.0-linux-amd64.tar.gz
+            fi
+
+            # Login to DO Container Registry
+            doctl auth init -t ${{ secrets.DIGITALOCEAN_TOKEN }}
+            doctl registry login --expiry-seconds 1200
+
+            # Deploy the container
+            docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
+            docker stop app || true
+            docker rm app || true
+            docker run -d --name app registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}

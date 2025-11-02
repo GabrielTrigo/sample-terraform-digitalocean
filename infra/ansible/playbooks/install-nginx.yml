@@ -1,18 +1,18 @@
 - name: Configure Nginx on Droplet
-  hosts: all
+  hosts: droplets
   become: true
   tasks:
     - name: Update apt cache
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
 
     - name: Install Nginx
-      apt:
+      ansible.builtin.apt:
         name: nginx
         state: present
 
     - name: Enable and start Nginx
-      service:
+      ansible.builtin.service:
         name: nginx
         enabled: true
         state: started
