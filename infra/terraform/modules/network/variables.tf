@@ -6,3 +6,7 @@ variable "env_name" {
 variable "droplet_id" {
   type = number
 }
+
+variable "region" {
+  type = string
+}

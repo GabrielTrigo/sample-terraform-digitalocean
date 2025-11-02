@@ -38,3 +38,9 @@ resource "digitalocean_firewall" "web_firewall" {
     destination_addresses = ["0.0.0.0/0", "::/0"]
   }
 }
+
+# resource "digitalocean_vpc" "web_vpc" {
+#   name     = "default-sfo2"
+#   region   = var.region
+#   ip_range = "10.120.0.0/20"
+# }

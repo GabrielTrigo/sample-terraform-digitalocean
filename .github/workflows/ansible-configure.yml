@@ -2,6 +2,12 @@ name: Configure Droplet with Ansible
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "infra/ansible/**"
+    branches:
+      - main
+      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

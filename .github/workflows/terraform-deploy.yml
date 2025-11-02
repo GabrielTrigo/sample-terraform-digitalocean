@@ -2,6 +2,12 @@ name: Deploy Terraform
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "infra/terraform/**"
+    branches:
+      - main
+      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
