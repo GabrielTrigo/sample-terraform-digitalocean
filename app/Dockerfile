@@ -16,8 +16,6 @@ COPY . .
 # compila o projeto em modo Release
 RUN dotnet publish app/web-api.csproj -c Release -o /app/publish /p:UseAppHost=false
 
-
-
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 
 # Define o diretório de trabalho da aplicação
