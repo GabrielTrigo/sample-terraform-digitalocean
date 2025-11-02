@@ -1,4 +1,4 @@
-name: Deploy Terraform + Ansible (DigitalOcean)
+name: Deploy Terraform
 
 on:
   workflow_dispatch:

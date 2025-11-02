@@ -3,9 +3,12 @@ name: Configure Droplet with Ansible
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Deploy Terraform + Ansible (DigitalOcean)"]
+    workflows: ["Deploy Terraform"]
     types:
-      - completed
+      - requested
+    branches:
+      - main
+      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -62,8 +65,13 @@ jobs:
           echo "${{ steps.get_ip.outputs.droplet_ip }} ansible_user=root" >> hosts.ini
           cat hosts.ini
 
-      - name: Run Ansible Playbook
+      - name: Run Ansible Playbook (Install Docker)
         working-directory: infra/ansible
         run: |
           ssh-keyscan -H "${{ steps.get_ip.outputs.droplet_ip }}" >> ~/.ssh/known_hosts
           ansible-playbook -i hosts.ini playbooks/setup-docker.yml
+
+      # - name: Run Ansible Playbook (Deploy App)
+      #   working-directory: infra/ansible
+      #   run: |
+      #     ansible-playbook -i hosts.ini playbooks/deploy-app.yml

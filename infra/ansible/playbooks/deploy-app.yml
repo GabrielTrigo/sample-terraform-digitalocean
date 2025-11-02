@@ -1,0 +1,41 @@
+---
+- name: Deploy application on Droplet
+  hosts: droplets
+  become: true
+  vars:
+    app_repo: "https://github.com/seuusuario/menuts-app.git"
+    app_dir: "/opt/menuts-app"
+
+  tasks:
+    - name: Ensure git is installed
+      ansible.builtin.apt:
+        name: git
+        state: present
+        update_cache: true
+
+    - name: Clone or update application repository
+      ansible.builtin.git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dir }}"
+        version: main
+        force: yes
+
+    - name: Create .env file (if needed)
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/.env"
+        content: |
+          NODE_ENV=production
+          PORT=80
+          API_URL=https://api.meusistema.com
+        mode: "0644"
+
+    - name: Run docker compose up -d
+      ansible.builtin.shell: |
+        docker compose -f {{ app_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ app_dir }}"
+      register: compose_output
+
+    - name: Show deployment result
+      ansible.builtin.debug:
+        msg: "{{ compose_output.stdout }}"
