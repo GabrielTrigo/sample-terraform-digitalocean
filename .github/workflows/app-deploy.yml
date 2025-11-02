@@ -39,9 +39,16 @@ jobs:
           droplet_ip=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$droplet_ip" >> $GITHUB_OUTPUT
 
+      - name: Generate tag
+        id: version
+        run: |
+          short_sha=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          date_tag=$(date +'%Y.%m.%d')
+          echo "tag=${date_tag}-${short_sha}" >> $GITHUB_OUTPUT
+
       - name: Build container image
         working-directory: app/
-        run: docker build -t registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }} .
+        run: docker build -t registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }} .
 
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         working-directory: app/
@@ -49,7 +56,7 @@ jobs:
 
       - name: Push image to DigitalOcean Container Registry
         working-directory: app/
-        run: docker push registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
+        run: docker push registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }}
 
       - name: Deploy on Droplet
         uses: appleboy/ssh-action@v1.0.3
@@ -72,7 +79,7 @@ jobs:
             doctl registry login --expiry-seconds 1200
 
             # Deploy the container
-            docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
+            docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }}
             docker stop app || true
             docker rm app || true
-            docker run -d --name app registry.digitalocean.com/sample-terraform-digitalocean/app:${{ github.sha }}
+            docker run -d --name app registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }}
