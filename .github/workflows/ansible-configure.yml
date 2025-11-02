@@ -5,7 +5,7 @@ on:
   workflow_run:
     workflows: ["Deploy Terraform"]
     types:
-      - requested
+      - completed
     branches:
       - main
       - dev
