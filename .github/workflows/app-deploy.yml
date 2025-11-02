@@ -1,12 +1,7 @@
 name: Deploy App
 
 on:
-  push:
-    paths:
-      - "app/**"
-    branches:
-      - main
-      - dev
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:

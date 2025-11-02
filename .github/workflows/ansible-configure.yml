@@ -2,16 +2,6 @@ name: Configure Droplet with Ansible
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Deploy Terraform"]
-    types:
-      - completed
-  push:
-    paths:
-      - "infra/ansible/**"
-    branches:
-      - main
-      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
