@@ -19,7 +19,7 @@ module "network" {
   source     = "./modules/network"
   env_name   = var.env_name
   droplet_id = module.droplet.droplet_id
-
+  region     = "sfo2"
   providers = {
     digitalocean = digitalocean
   }

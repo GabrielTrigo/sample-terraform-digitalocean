@@ -11,8 +11,22 @@
         name: nginx
         state: present
 
+    # Esta tarefa copia seu arquivo de configuração local para o servidor
+    - name: Configure Nginx from template
+      ansible.builtin.template:
+        src: ../templates/nginx.conf.j2 # Caminho para o template no seu repositório
+        dest: /etc/nginx/sites-available/default # Destino no servidor
+      notify: Restart nginx # Informa ao Ansible para rodar o handler "Restart nginx"
+
     - name: Enable and start Nginx
       ansible.builtin.service:
         name: nginx
         enabled: true
         state: started
+
+  # Handlers só são executados se uma tarefa os "notificar" (ou seja, se o arquivo mudou)
+  handlers:
+    - name: Restart nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted

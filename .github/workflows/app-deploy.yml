@@ -1,12 +1,7 @@
 name: Deploy App
 
 on:
-  push:
-    paths:
-      - "app/**"
-    branches:
-      - main
-      - dev
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -43,7 +38,7 @@ jobs:
         id: version
         run: |
           short_sha=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          date_tag=$(date +'%Y.%m.%d')
+          date_tag=$(date +'%d.%m.%Y_%H.%M.%S')
           echo "tag=${date_tag}-${short_sha}" >> $GITHUB_OUTPUT
 
       - name: Build container image
@@ -82,4 +77,4 @@ jobs:
             docker pull registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }}
             docker stop app || true
             docker rm app || true
-            docker run -d --name app registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }}
+            docker run -p 8080:8080 -d --name app registry.digitalocean.com/sample-terraform-digitalocean/app:${{ steps.version.outputs.tag }}
