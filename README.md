@@ -2,6 +2,8 @@
 
 Repositório didático para praticar conceitos e técnicas de infraestrutura como código, CI/CD e provisionamento: Terraform, Ansible, Docker, e pipelines (GitHub Actions). Este repositório foi criado para fins educacionais e será público para a comunidade.
 
+[🇺🇸 English version](https://github.com/GabrielTrigo/sample-terraform-digitalocean/blob/dev/README.en.md)
+
 ## Objetivo
 
 Este projeto serve como um laboratório: organizar infra e aplicação mínima para treinar e demonstrar padrões de entrega contínua e Infraestrutura como Código (IaC). Os pontos principais são:
